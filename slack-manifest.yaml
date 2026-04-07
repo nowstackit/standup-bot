@@ -1,0 +1,31 @@
+display_information:
+  name: Superjoin Standup Bot
+  description: Posts a pre-standup briefing every weekday morning summarizing the last 24-72h across monitored channels.
+  background_color: "#1f2937"
+features:
+  bot_user:
+    display_name: standup-bot
+    always_online: true
+  slash_commands:
+    - command: /standup-brief
+      url: https://YOUR-VERCEL-DOMAIN.vercel.app/api/slack/command
+      description: Generate the pre-standup brief on demand
+      should_escape: false
+oauth_config:
+  scopes:
+    bot:
+      # Read messages + threads from the channels we're invited to
+      - channels:history
+      - channels:read
+      - channels:join     # auto-join public channels matching patterns
+      - groups:history
+      - groups:read
+      - mpim:read
+      - users:read
+      - chat:write
+      - chat:write.public
+      - commands
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

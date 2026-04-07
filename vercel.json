@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/standup-brief",
+      "schedule": "30 4 * * 1-5"
+    }
+  ],
+  "functions": {
+    "api/cron/standup-brief.ts": {
+      "maxDuration": 300,
+      "runtime": "nodejs20.x"
+    },
+    "api/slack/command.ts": {
+      "maxDuration": 300,
+      "runtime": "nodejs20.x"
+    }
+  }
+}
