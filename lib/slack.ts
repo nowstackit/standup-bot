@@ -5,12 +5,22 @@ import type {
   NormalizedMessage,
 } from "./types.js";
 
-const token = process.env.SLACK_BOT_TOKEN;
-if (!token) {
-  console.warn("[slack] SLACK_BOT_TOKEN is not set");
-}
+const botToken = process.env.SLACK_BOT_TOKEN;
+if (!botToken) console.warn("[slack] SLACK_BOT_TOKEN is not set");
 
-export const slack = new WebClient(token);
+const userToken = process.env.SLACK_USER_TOKEN;
+if (!userToken)
+  console.warn(
+    "[slack] SLACK_USER_TOKEN is not set — bot must be invited to channels manually",
+  );
+
+// Bot token: used only for posting messages.
+export const slack = new WebClient(botToken);
+
+// User token: used for all reads (history, replies, user info, channel list).
+// With user scopes the token can read any channel the installing user is a member
+// of, without needing the bot to be invited.
+const reader = new WebClient(userToken ?? botToken);
 
 // In-memory user cache so we don't hammer users.info on every run.
 const userCache = new Map<string, string>();
@@ -19,8 +29,8 @@ let cachedWorkspaceUrl: string | null = null;
 
 export async function getWorkspaceUrl(): Promise<string> {
   if (cachedWorkspaceUrl) return cachedWorkspaceUrl;
-  const res = await slack.auth.test();
-  const url = (res as any).url as string; // e.g. "https://myteam.slack.com/"
+  const res = await reader.auth.test();
+  const url = (res as any).url as string;
   cachedWorkspaceUrl = url.replace(/\/$/, "");
   return cachedWorkspaceUrl;
 }
@@ -37,7 +47,7 @@ export async function resolveUser(userId: string): Promise<string> {
   if (!userId) return "unknown";
   if (userCache.has(userId)) return userCache.get(userId)!;
   try {
-    const res = await slack.users.info({ user: userId });
+    const res = await reader.users.info({ user: userId });
     const name =
       (res.user as any)?.profile?.display_name ||
       (res.user as any)?.profile?.real_name ||
@@ -78,10 +88,8 @@ function matchesPattern(name: string, pattern: string): boolean {
 }
 
 /**
- * Discover all workspace channels matching any pattern. For public channels the
- * bot isn't a member of, it will attempt to join automatically. Private/Slack
- * Connect channels the bot hasn't been invited to are logged and skipped.
- * excludeIds prevents re-adding channels already listed statically in config.
+ * Discover all channels the installing user can see that match any pattern.
+ * Uses the user token so no bot invite is needed.
  */
 export async function discoverPatternChannels(
   patterns: ChannelPattern[],
@@ -91,35 +99,16 @@ export async function discoverPatternChannels(
   let cursor: string | undefined;
 
   do {
-    const res: any = await slack.conversations.list({
+    const res: any = await reader.conversations.list({
       limit: 200,
       cursor,
-      types: "public_channel,private_channel",
+      types: "public_channel,private_channel,mpim",
       exclude_archived: true,
     });
     for (const ch of res.channels ?? []) {
       if (!ch.id || !ch.name || excludeIds.has(ch.id)) continue;
       for (const p of patterns) {
         if (!matchesPattern(ch.name, p.pattern)) continue;
-
-        // If the bot isn't a member yet, try to join.
-        if (!ch.is_member) {
-          if (ch.is_private || ch.is_ext_shared || ch.is_org_shared) {
-            // Private / Slack Connect — can't self-join, needs an invite.
-            console.warn(
-              `[slack] not a member of private/connect channel #${ch.name} — invite @standup-bot to include it`,
-            );
-            break;
-          }
-          try {
-            await slack.conversations.join({ channel: ch.id });
-            console.log(`[slack] auto-joined public channel #${ch.name}`);
-          } catch (e) {
-            console.warn(`[slack] failed to join #${ch.name}:`, e);
-            break;
-          }
-        }
-
         discovered.push({
           id: ch.id,
           name: ch.name,
@@ -147,7 +136,7 @@ export async function fetchChannelMessages(
   let cursor: string | undefined = undefined;
 
   do {
-    const res: any = await slack.conversations.history({
+    const res: any = await reader.conversations.history({
       channel: channel.id,
       oldest: String(oldest),
       limit: 200,
@@ -180,14 +169,13 @@ export async function fetchChannelMessages(
     .filter((m) => (m.reply_count ?? 0) > 0 && m.thread_ts)
     .map(async (m) => {
       try {
-        const r: any = await slack.conversations.replies({
+        const r: any = await reader.conversations.replies({
           channel: channel.id,
           ts: m.thread_ts!,
           oldest: String(oldest),
           limit: 200,
         });
         const replies = (r.messages ?? []) as any[];
-        // skip the parent (first message)
         return replies.slice(1).flatMap((reply: any) => {
           if (excludeBots && (reply.bot_id || reply.subtype === "bot_message"))
             return [];
