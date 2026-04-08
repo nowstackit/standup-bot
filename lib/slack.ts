@@ -1,5 +1,9 @@
 import { WebClient } from "@slack/web-api";
-import type { ChannelConfig, ChannelPattern, NormalizedMessage } from "./types.js";
+import type {
+  ChannelConfig,
+  ChannelPattern,
+  NormalizedMessage,
+} from "./types.js";
 
 const token = process.env.SLACK_BOT_TOKEN;
 if (!token) {
@@ -21,7 +25,11 @@ export async function getWorkspaceUrl(): Promise<string> {
   return cachedWorkspaceUrl;
 }
 
-function buildPermalink(workspaceUrl: string, channelId: string, ts: string): string {
+function buildPermalink(
+  workspaceUrl: string,
+  channelId: string,
+  ts: string,
+): string {
   return `${workspaceUrl}/archives/${channelId}/p${ts.replace(".", "")}`;
 }
 
@@ -53,7 +61,9 @@ export function getWindow(now = new Date()): {
   hours: number;
   isMonday: boolean;
 } {
-  const istNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+  const istNow = new Date(
+    now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+  );
   const dow = istNow.getDay(); // 0 = Sun, 1 = Mon
   const isMonday = dow === 1;
   const hours = isMonday ? 72 : 24;
@@ -75,7 +85,7 @@ function matchesPattern(name: string, pattern: string): boolean {
  */
 export async function discoverPatternChannels(
   patterns: ChannelPattern[],
-  excludeIds: Set<string>
+  excludeIds: Set<string>,
 ): Promise<ChannelConfig[]> {
   const discovered: ChannelConfig[] = [];
   let cursor: string | undefined;
@@ -96,7 +106,9 @@ export async function discoverPatternChannels(
         if (!ch.is_member) {
           if (ch.is_private || ch.is_ext_shared || ch.is_org_shared) {
             // Private / Slack Connect — can't self-join, needs an invite.
-            console.warn(`[slack] not a member of private/connect channel #${ch.name} — invite @standup-bot to include it`);
+            console.warn(
+              `[slack] not a member of private/connect channel #${ch.name} — invite @standup-bot to include it`,
+            );
             break;
           }
           try {
@@ -129,7 +141,7 @@ export async function fetchChannelMessages(
   channel: ChannelConfig,
   oldest: number,
   excludeBots: boolean,
-  workspaceUrl: string
+  workspaceUrl: string,
 ): Promise<NormalizedMessage[]> {
   const out: NormalizedMessage[] = [];
   let cursor: string | undefined = undefined;
@@ -143,7 +155,8 @@ export async function fetchChannelMessages(
     });
     const msgs = (res.messages ?? []) as any[];
     for (const m of msgs) {
-      if (!m || m.subtype === "channel_join" || m.subtype === "channel_leave") continue;
+      if (!m || m.subtype === "channel_join" || m.subtype === "channel_leave")
+        continue;
       if (excludeBots && (m.bot_id || m.subtype === "bot_message")) continue;
       if (!m.text || !m.user) continue;
       out.push({
@@ -153,7 +166,10 @@ export async function fetchChannelMessages(
         text: m.text,
         thread_ts: m.thread_ts,
         reply_count: m.reply_count ?? 0,
-        reactions: (m.reactions ?? []).map((r: any) => ({ name: r.name, count: r.count })),
+        reactions: (m.reactions ?? []).map((r: any) => ({
+          name: r.name,
+          count: r.count,
+        })),
       });
     }
     cursor = res.response_metadata?.next_cursor || undefined;
@@ -173,18 +189,24 @@ export async function fetchChannelMessages(
         const replies = (r.messages ?? []) as any[];
         // skip the parent (first message)
         return replies.slice(1).flatMap((reply: any) => {
-          if (excludeBots && (reply.bot_id || reply.subtype === "bot_message")) return [];
+          if (excludeBots && (reply.bot_id || reply.subtype === "bot_message"))
+            return [];
           if (!reply.text || !reply.user) return [];
-          return [{
-            ts: reply.ts,
-            user_id: reply.user,
-            user: reply.user,
-            text: `↳ (in thread) ${reply.text}`,
-            thread_ts: reply.thread_ts,
-          } as NormalizedMessage];
+          return [
+            {
+              ts: reply.ts,
+              user_id: reply.user,
+              user: reply.user,
+              text: `↳ (in thread) ${reply.text}`,
+              thread_ts: reply.thread_ts,
+            } as NormalizedMessage,
+          ];
         });
       } catch (e) {
-        console.warn(`[slack] failed to fetch thread for ${channel.name}:${m.ts}`, e);
+        console.warn(
+          `[slack] failed to fetch thread for ${channel.name}:${m.ts}`,
+          e,
+        );
         return [];
       }
     });
@@ -208,7 +230,11 @@ export async function fetchChannelMessages(
 }
 
 /** Post a Block Kit message to the configured standup channel. */
-export async function postBriefing(channelId: string, blocks: any[], text: string) {
+export async function postBriefing(
+  channelId: string,
+  blocks: any[],
+  text: string,
+) {
   return slack.chat.postMessage({
     channel: channelId,
     text,

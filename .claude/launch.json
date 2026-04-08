@@ -4,7 +4,10 @@
     {
       "name": "Vercel Dev",
       "runtimeExecutable": "/Users/abhinavdas/.nvm/versions/node/v20.9.0/bin/node",
-      "runtimeArgs": ["/Users/abhinavdas/.nvm/versions/node/v20.9.0/bin/vercel", "dev"],
+      "runtimeArgs": [
+        "/Users/abhinavdas/.nvm/versions/node/v20.9.0/bin/vercel",
+        "dev"
+      ],
       "port": 3000
     }
   ]

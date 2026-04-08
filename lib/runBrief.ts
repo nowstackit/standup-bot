@@ -1,4 +1,10 @@
-import { discoverPatternChannels, fetchChannelMessages, getWindow, getWorkspaceUrl, postBriefing } from "./slack.js";
+import {
+  discoverPatternChannels,
+  fetchChannelMessages,
+  getWindow,
+  getWorkspaceUrl,
+  postBriefing,
+} from "./slack.js";
 import { summarizeGroup } from "./gemini.js";
 import { composeBriefing } from "./compose.js";
 import type {
@@ -18,7 +24,7 @@ function groupKey(c: { business_line: string; function: string }): string {
 export async function runBrief(opts?: { dryRun?: boolean }) {
   const { oldest, hours, isMonday } = getWindow();
   console.log(
-    `[brief] window=${hours}h isMonday=${isMonday} static_channels=${cfg.channels.length}`
+    `[brief] window=${hours}h isMonday=${isMonday} static_channels=${cfg.channels.length}`,
   );
 
   const workspaceUrl = await getWorkspaceUrl();
@@ -29,7 +35,10 @@ export async function runBrief(opts?: { dryRun?: boolean }) {
     ? await discoverPatternChannels(cfg.channel_patterns, staticIds)
     : [];
   if (patternChannels.length > 0) {
-    console.log(`[brief] discovered ${patternChannels.length} Slack Connect channels:`, patternChannels.map((c) => c.name).join(", "));
+    console.log(
+      `[brief] discovered ${patternChannels.length} Slack Connect channels:`,
+      patternChannels.map((c) => c.name).join(", "),
+    );
   }
   const allChannels = [...cfg.channels, ...patternChannels];
 
@@ -42,7 +51,12 @@ export async function runBrief(opts?: { dryRun?: boolean }) {
       const idx = i++;
       const ch = allChannels[idx];
       try {
-        const messages = await fetchChannelMessages(ch, oldest, cfg.exclude_bots, workspaceUrl);
+        const messages = await fetchChannelMessages(
+          ch,
+          oldest,
+          cfg.exclude_bots,
+          workspaceUrl,
+        );
         fetched.push({ channel: ch, messages });
         console.log(`[brief]  ${ch.name}: ${messages.length} msgs`);
       } catch (e) {
@@ -79,7 +93,10 @@ export async function runBrief(opts?: { dryRun?: boolean }) {
           open_action_items: [],
           decisions: [],
           blockers: [],
-          themes: total === 0 ? [] : [`Quiet (${total} msgs) — skipped detailed summary.`],
+          themes:
+            total === 0
+              ? []
+              : [`Quiet (${total} msgs) — skipped detailed summary.`],
         },
       });
       continue;

@@ -46,7 +46,9 @@ async function main() {
 
     for (const ch of res.channels ?? []) {
       if (!ch.id || !ch.name || staticIds.has(ch.id)) continue;
-      const matchedPattern = patterns.find((p) => matchesPattern(ch.name, p.pattern));
+      const matchedPattern = patterns.find((p) =>
+        matchesPattern(ch.name, p.pattern),
+      );
       if (!matchedPattern) continue;
 
       total++;
@@ -66,7 +68,9 @@ async function main() {
         await slack.conversations.join({ channel: ch.id });
         joined.push(`#${ch.name}`);
       } catch (e: any) {
-        needsInvite.push(`#${ch.name}  (${ch.id}) — join failed: ${e?.message ?? e}`);
+        needsInvite.push(
+          `#${ch.name}  (${ch.id}) — join failed: ${e?.message ?? e}`,
+        );
       }
     }
 
@@ -88,14 +92,23 @@ async function main() {
   }
 
   if (needsInvite.length) {
-    console.log(`⚠️  Need manual /invite @standup-bot (${needsInvite.length}):`);
+    console.log(
+      `⚠️  Need manual /invite @standup-bot (${needsInvite.length}):`,
+    );
     needsInvite.forEach((c) => console.log("  ", c));
-    console.log("\nFor each channel above, open it in Slack and type: /invite @standup-bot");
+    console.log(
+      "\nFor each channel above, open it in Slack and type: /invite @standup-bot",
+    );
   }
 
   if (needsInvite.length === 0 && joined.length === 0) {
-    console.log("Nothing to do — bot is already a member of all matching channels.");
+    console.log(
+      "Nothing to do — bot is already a member of all matching channels.",
+    );
   }
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

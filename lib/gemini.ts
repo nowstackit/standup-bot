@@ -66,10 +66,10 @@ const SCHEMA_HINT = `{
 function buildUserPrompt(group: GroupKey, inputs: ChannelDigestInput[]) {
   const lines: string[] = [];
   lines.push(
-    `Group: business_line=${group.business_line} | function=${group.function}`
+    `Group: business_line=${group.business_line} | function=${group.function}`,
   );
   lines.push(
-    `Below are the messages from ${inputs.length} channel(s). Each message is on its own line in the form: [#channel] <ts> @user: text  (permalink)`
+    `Below are the messages from ${inputs.length} channel(s). Each message is on its own line in the form: [#channel] <ts> @user: text  (permalink)`,
   );
   lines.push("");
 
@@ -92,7 +92,7 @@ function buildUserPrompt(group: GroupKey, inputs: ChannelDigestInput[]) {
 
 export async function summarizeGroup(
   group: GroupKey,
-  inputs: ChannelDigestInput[]
+  inputs: ChannelDigestInput[],
 ): Promise<GroupedDigest> {
   const totalMsgs = inputs.reduce((s, i) => s + i.messages.length, 0);
   const result: GroupedDigest = {
@@ -128,7 +128,7 @@ export async function summarizeGroup(
   } catch (e) {
     console.error(
       `[gemini] failed to summarize ${group.business_line}/${group.function}`,
-      e
+      e,
     );
     result.digest.themes = [
       `(LLM error — ${totalMsgs} messages from ${result.channels.length} channels not summarized)`,

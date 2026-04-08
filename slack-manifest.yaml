@@ -17,7 +17,7 @@ oauth_config:
       # Read messages + threads from the channels we're invited to
       - channels:history
       - channels:read
-      - channels:join     # auto-join public channels matching patterns
+      - channels:join # auto-join public channels matching patterns
       - groups:history
       - groups:read
       - mpim:read

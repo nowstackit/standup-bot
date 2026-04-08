@@ -18,7 +18,7 @@ export interface ChannelConfig {
 }
 
 export interface ChannelPattern {
-  pattern: string;         // glob with leading/trailing * e.g. "superjoin-*" or "*-superjoin"
+  pattern: string; // glob with leading/trailing * e.g. "superjoin-*" or "*-superjoin"
   business_line: BusinessLine;
   function: FunctionArea;
   priority: Priority;
@@ -37,7 +37,7 @@ export interface ChannelsFile {
 
 export interface NormalizedMessage {
   ts: string;
-  user: string;          // resolved display name when possible
+  user: string; // resolved display name when possible
   user_id: string;
   text: string;
   thread_ts?: string;
@@ -53,9 +53,9 @@ export interface ChannelDigestInput {
 
 export interface BriefingItem {
   text: string;
-  channel: string;        // #channel-name
+  channel: string; // #channel-name
   permalink?: string;
-  owner?: string;         // @user (best guess)
+  owner?: string; // @user (best guess)
 }
 
 export interface SectionDigest {
@@ -63,7 +63,7 @@ export interface SectionDigest {
   open_action_items: BriefingItem[];
   decisions: BriefingItem[];
   blockers: BriefingItem[];
-  themes: string[];       // bullet themes for the group
+  themes: string[]; // bullet themes for the group
 }
 
 export interface GroupKey {
@@ -73,7 +73,7 @@ export interface GroupKey {
 
 export interface GroupedDigest {
   group: GroupKey;
-  channels: string[];     // channel names included
+  channels: string[]; // channel names included
   message_count: number;
   digest: SectionDigest;
 }

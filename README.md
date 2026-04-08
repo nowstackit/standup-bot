@@ -53,6 +53,7 @@ https://aistudio.google.com/apikey → create key. Free tier easily covers 60-70
 Replace the example `C0XXXXXXXXX` IDs with your real channel IDs. To find a channel ID: open Slack in browser → channel URL ends in `/C0123ABCD`. Or right-click channel → View channel details → bottom of the popup.
 
 For each channel set:
+
 - `business_line`: `prosumer` | `b2b` | `shared`
 - `function`: `product` | `sales` | `support` | `ops` | `eng` | `marketing` | `leadership`
 - `priority`: `high` | `medium` | `low`
@@ -89,18 +90,19 @@ SLACK_BOT_TOKEN=xoxb-... GEMINI_API_KEY=... DRY_RUN=1 npx tsx scripts/run-local.
 
 ## Tuning
 
-| Knob | Where | What it does |
-|---|---|---|
-| Window hours | `lib/slack.ts` `getWindow()` | Currently 24h normal, 72h on Mondays. Change to 48h if Sunday is too noisy. |
-| Min messages to summarize a group | `config/channels.json` `min_messages_to_summarize` | Skips LLM calls for quiet groups. Default 3. |
-| Aggressiveness of follow-up detection | `lib/gemini.ts` `SYSTEM_PROMPT` | Prompt is currently "balanced". Edit the bullet definitions to be more conservative or aggressive. |
-| Brief length | `lib/compose.ts` | Caps top customer issues at 12 and blockers at 10. Bump if a noisy day truncates important items. |
-| Model | env `GEMINI_MODEL` | `gemini-2.0-flash` (default, cheap+fast) or `gemini-2.0-pro` (higher quality). |
-| Cron time | `vercel.json` `crons[0].schedule` | `30 4 * * 1-5` = 04:30 UTC = 10:00 IST. UTC, not local. |
+| Knob                                  | Where                                              | What it does                                                                                       |
+| ------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Window hours                          | `lib/slack.ts` `getWindow()`                       | Currently 24h normal, 72h on Mondays. Change to 48h if Sunday is too noisy.                        |
+| Min messages to summarize a group     | `config/channels.json` `min_messages_to_summarize` | Skips LLM calls for quiet groups. Default 3.                                                       |
+| Aggressiveness of follow-up detection | `lib/gemini.ts` `SYSTEM_PROMPT`                    | Prompt is currently "balanced". Edit the bullet definitions to be more conservative or aggressive. |
+| Brief length                          | `lib/compose.ts`                                   | Caps top customer issues at 12 and blockers at 10. Bump if a noisy day truncates important items.  |
+| Model                                 | env `GEMINI_MODEL`                                 | `gemini-2.0-flash` (default, cheap+fast) or `gemini-2.0-pro` (higher quality).                     |
+| Cron time                             | `vercel.json` `crons[0].schedule`                  | `30 4 * * 1-5` = 04:30 UTC = 10:00 IST. UTC, not local.                                            |
 
 ## Costs
 
 At ~70 channels with medium-low chat:
+
 - Slack API: free
 - Gemini 2.0 Flash: ~$0.01-0.05 per brief (well under $2/month)
 - Vercel: free tier is enough — one cron + one slash command, both under 5min

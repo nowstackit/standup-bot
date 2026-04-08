@@ -1,18 +1,82 @@
 {
   "channels": [
-    { "id": "C0601PL63CL", "name": "production-issues",         "business_line": "prosumer", "function": "eng",     "priority": "high"   },
-    { "id": "C05RY2CJYT0", "name": "schedule-failure-alerts",   "business_line": "prosumer", "function": "eng",     "priority": "high"   },
-    { "id": "C052M8E2G94", "name": "support-requests",          "business_line": "prosumer", "function": "support", "priority": "high"   },
-    { "id": "C04T41GSW8J", "name": "customers",                 "business_line": "shared",   "function": "support", "priority": "high"   },
-    { "id": "C061FUPB6CB", "name": "product-updates",           "business_line": "shared",   "function": "product", "priority": "medium" },
-    { "id": "C04SDRHSNKS", "name": "product",                   "business_line": "shared",   "function": "product", "priority": "medium" },
-    { "id": "C07JE3ZM9FX", "name": "target-25kmrr",             "business_line": "b2b",      "function": "sales",   "priority": "high"   },
-    { "id": "C0A90G64LG4", "name": "gtm-superjoin-for-finance", "business_line": "b2b",      "function": "sales",   "priority": "high"   },
-    { "id": "C0A8HC8V6SG", "name": "customers-excel-sjfinance", "business_line": "b2b",      "function": "ops",     "priority": "medium" }
+    {
+      "id": "C0601PL63CL",
+      "name": "production-issues",
+      "business_line": "prosumer",
+      "function": "eng",
+      "priority": "high"
+    },
+    {
+      "id": "C05RY2CJYT0",
+      "name": "schedule-failure-alerts",
+      "business_line": "prosumer",
+      "function": "eng",
+      "priority": "high"
+    },
+    {
+      "id": "C052M8E2G94",
+      "name": "support-requests",
+      "business_line": "prosumer",
+      "function": "support",
+      "priority": "high"
+    },
+    {
+      "id": "C04T41GSW8J",
+      "name": "customers",
+      "business_line": "shared",
+      "function": "support",
+      "priority": "high"
+    },
+    {
+      "id": "C061FUPB6CB",
+      "name": "product-updates",
+      "business_line": "shared",
+      "function": "product",
+      "priority": "medium"
+    },
+    {
+      "id": "C04SDRHSNKS",
+      "name": "product",
+      "business_line": "shared",
+      "function": "product",
+      "priority": "medium"
+    },
+    {
+      "id": "C07JE3ZM9FX",
+      "name": "target-25kmrr",
+      "business_line": "b2b",
+      "function": "sales",
+      "priority": "high"
+    },
+    {
+      "id": "C0A90G64LG4",
+      "name": "gtm-superjoin-for-finance",
+      "business_line": "b2b",
+      "function": "sales",
+      "priority": "high"
+    },
+    {
+      "id": "C0A8HC8V6SG",
+      "name": "customers-excel-sjfinance",
+      "business_line": "b2b",
+      "function": "ops",
+      "priority": "medium"
+    }
   ],
   "channel_patterns": [
-    { "pattern": "superjoin-*", "business_line": "b2b", "function": "support", "priority": "high" },
-    { "pattern": "*-superjoin", "business_line": "b2b", "function": "support", "priority": "high" }
+    {
+      "pattern": "superjoin-*",
+      "business_line": "b2b",
+      "function": "support",
+      "priority": "high"
+    },
+    {
+      "pattern": "*-superjoin",
+      "business_line": "b2b",
+      "function": "support",
+      "priority": "high"
+    }
   ],
   "post_to_channel": "C05BRT9CZ7G",
   "post_to_channel_name": "team-schedule",

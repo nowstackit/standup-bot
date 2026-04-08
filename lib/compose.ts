@@ -32,7 +32,7 @@ function section(title: string, items: BriefingItem[]): string | null {
 export function composeBriefing(
   digests: GroupedDigest[],
   windowHours: number,
-  isMonday: boolean
+  isMonday: boolean,
 ): { blocks: any[]; fallbackText: string } {
   const blocks: any[] = [];
 
@@ -54,7 +54,7 @@ export function composeBriefing(
         type: "mrkdwn",
         text: `Last *${windowHours}h* across ${digests.reduce(
           (s, d) => s + d.channels.length,
-          0
+          0,
         )} channels${isMonday ? " · Monday catch-up window" : ""}`,
       },
     ],
@@ -62,7 +62,7 @@ export function composeBriefing(
 
   // Top-of-brief alarms: pull customer issues + blockers from ALL groups so they're impossible to miss.
   const topIssues = digests.flatMap((d) =>
-    d.digest.customer_issues.map((i) => ({ ...i, _bl: d.group.business_line }))
+    d.digest.customer_issues.map((i) => ({ ...i, _bl: d.group.business_line })),
   );
   const topBlockers = digests.flatMap((d) => d.digest.blockers);
 
@@ -97,7 +97,7 @@ export function composeBriefing(
   const order: Record<string, number> = { prosumer: 0, b2b: 1, shared: 2 };
   const sorted = [...digests].sort(
     (a, b) =>
-      (order[a.group.business_line] ?? 9) - (order[b.group.business_line] ?? 9)
+      (order[a.group.business_line] ?? 9) - (order[b.group.business_line] ?? 9),
   );
 
   // Group by business_line, then by function within.
@@ -122,14 +122,17 @@ export function composeBriefing(
       parts.push(
         `${emoji} *${g.group.function.toUpperCase()}* — ${g.message_count} msgs across ${g.channels
           .map((c) => `#${c}`)
-          .join(", ")}`
+          .join(", ")}`,
       );
 
       if (g.digest.themes.length > 0) {
         parts.push(`_${g.digest.themes.map((t) => `• ${t}`).join("\n")}_`);
       }
 
-      const s1 = section("Open action items / follow-ups", g.digest.open_action_items);
+      const s1 = section(
+        "Open action items / follow-ups",
+        g.digest.open_action_items,
+      );
       const s2 = section("Decisions", g.digest.decisions);
       // Customer issues + blockers already shown at the top, but include
       // again per-group so context isn't lost.
