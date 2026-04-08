@@ -89,14 +89,20 @@ export async function runBrief(opts?: { dryRun?: boolean }) {
         channels: inputs.map((x) => x.channel.name),
         message_count: total,
         digest: {
+          incidents: [],
           customer_issues: [],
-          open_action_items: [],
+          action_items: [],
           decisions: [],
           blockers: [],
-          themes:
-            total === 0
-              ? []
-              : [`Quiet (${total} msgs) — skipped detailed summary.`],
+          wins: [],
+          themes: {
+            issues:
+              total === 0
+                ? []
+                : [`Quiet (${total} msgs) — skipped detailed summary.`],
+            fyi: [],
+            actionables: [],
+          },
         },
       });
       continue;
