@@ -8,12 +8,10 @@
   ],
   "functions": {
     "api/cron/standup-brief.ts": {
-      "maxDuration": 300,
-      "runtime": "nodejs20.x"
+      "maxDuration": 300
     },
     "api/slack/command.ts": {
-      "maxDuration": 300,
-      "runtime": "nodejs20.x"
+      "maxDuration": 300
     }
   }
 }

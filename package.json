@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Slack bot that posts a daily pre-standup briefing for the Superjoin team. Pulls last 24h (48h on Mondays) from a curated set of channels, runs them through Gemini, and posts a structured digest of customer issues, action items, decisions and blockers grouped by business line + function.",
   "private": true,
+  "engines": {
+    "node": ">=20.x"
+  },
   "scripts": {
     "dev": "vercel dev",
     "deploy": "vercel deploy --prod",
