@@ -7,15 +7,20 @@ import {
 } from "./slack.js";
 import { summarizeGroup } from "./gemini.js";
 import { composeBriefing } from "./compose.js";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import type {
   ChannelDigestInput,
   ChannelsFile,
   GroupedDigest,
   GroupKey,
 } from "./types.js";
-import channelsConfig from "../config/channels.json" with { type: "json" };
 
-const cfg = channelsConfig as unknown as ChannelsFile;
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const cfg = JSON.parse(
+  readFileSync(join(__dirname, "../config/channels.json"), "utf8"),
+) as ChannelsFile;
 
 function groupKey(c: { business_line: string; function: string }): string {
   return `${c.business_line}::${c.function}`;

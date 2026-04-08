@@ -7,11 +7,16 @@
  *   npx tsx scripts/join-channels.ts
  */
 
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { WebClient } from "@slack/web-api";
-import channelsConfig from "../config/channels.json" with { type: "json" };
 import type { ChannelsFile } from "../lib/types.js";
 
-const cfg = channelsConfig as unknown as ChannelsFile;
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const cfg = JSON.parse(
+  readFileSync(join(__dirname, "../config/channels.json"), "utf8"),
+) as ChannelsFile;
 const slack = new WebClient(process.env.SLACK_BOT_TOKEN);
 
 function matchesPattern(name: string, pattern: string): boolean {
