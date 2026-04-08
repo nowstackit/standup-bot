@@ -1,8 +1,8 @@
 import type { BriefingItem, GroupedDigest } from "./types.js";
 
 const BL_LABEL: Record<string, string> = {
-  prosumer: "Prosumer (PLG)",
-  b2b: "B2B (Sales-led)",
+  prosumer: "Superjoin.ai — Prosumer (PLG)",
+  b2b: "Superjoin.finance — B2B (Sales-led)",
   shared: "Shared / Cross-team",
 };
 
@@ -52,30 +52,35 @@ export function composeBriefing(
     elements: [
       {
         type: "mrkdwn",
-        text: `Last *${windowHours}h* across ${digests.reduce(
-          (s, d) => s + d.channels.length,
-          0,
-        )} channels${isMonday ? " · Monday catch-up window" : ""}`,
+        text: `Last *${windowHours}h* across ${digests.reduce((s, d) => s + d.channels.length, 0)} channels${isMonday ? " · Monday catch-up window" : ""}`,
       },
     ],
   });
 
-  // Top-of-brief alarms: pull customer issues + blockers from ALL groups so they're impossible to miss.
-  const topIssues = digests.flatMap((d) =>
-    d.digest.customer_issues.map((i) => ({ ...i, _bl: d.group.business_line })),
-  );
+  // ── Top-of-brief alarms ─────────────────────────────────────────────────
+  const topIncidents = digests.flatMap((d) => d.digest.incidents);
+  const topCustomerIssues = digests.flatMap((d) => d.digest.customer_issues);
   const topBlockers = digests.flatMap((d) => d.digest.blockers);
+  const topWins = digests.flatMap((d) => d.digest.wins);
 
-  if (topIssues.length > 0) {
+  if (topIncidents.length > 0) {
     blocks.push({ type: "divider" });
     blocks.push({
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `:rotating_light: *Customer issues & incidents (${topIssues.length})*\n${topIssues
-          .slice(0, 12)
-          .map(fmtItem)
-          .join("\n")}`,
+        text: `:rotating_light: *Incidents (${topIncidents.length})*\n${topIncidents.map(fmtItem).join("\n")}`,
+      },
+    });
+  }
+
+  if (topCustomerIssues.length > 0) {
+    if (topIncidents.length === 0) blocks.push({ type: "divider" });
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `:warning: *Customer issues (${topCustomerIssues.length})*\n${topCustomerIssues.map(fmtItem).join("\n")}`,
       },
     });
   }
@@ -85,22 +90,28 @@ export function composeBriefing(
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `:no_entry: *Blockers (${topBlockers.length})*\n${topBlockers
-          .slice(0, 10)
-          .map(fmtItem)
-          .join("\n")}`,
+        text: `:no_entry: *Blockers (${topBlockers.length})*\n${topBlockers.map(fmtItem).join("\n")}`,
       },
     });
   }
 
-  // Group sections — sorted: prosumer first, b2b next, shared last.
+  if (topWins.length > 0) {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `:tada: *Wins (${topWins.length})*\n${topWins.map(fmtItem).join("\n")}`,
+      },
+    });
+  }
+
+  // ── Per-group sections ──────────────────────────────────────────────────
   const order: Record<string, number> = { prosumer: 0, b2b: 1, shared: 2 };
   const sorted = [...digests].sort(
     (a, b) =>
       (order[a.group.business_line] ?? 9) - (order[b.group.business_line] ?? 9),
   );
 
-  // Group by business_line, then by function within.
   const byBL = new Map<string, GroupedDigest[]>();
   for (const d of sorted) {
     const key = d.group.business_line;
@@ -119,29 +130,36 @@ export function composeBriefing(
       if (g.message_count === 0) continue;
       const emoji = FN_EMOJI[g.group.function] ?? ":small_blue_diamond:";
       const parts: string[] = [];
+
       parts.push(
-        `${emoji} *${g.group.function.toUpperCase()}* — ${g.message_count} msgs across ${g.channels
-          .map((c) => `#${c}`)
-          .join(", ")}`,
+        `${emoji} *${g.group.function.toUpperCase()}* — ${g.message_count} msgs across ${g.channels.map((c) => `#${c}`).join(", ")}`,
       );
 
-      if (g.digest.themes.length > 0) {
-        parts.push(`_${g.digest.themes.map((t) => `• ${t}`).join("\n")}_`);
+      // Structured themes
+      const { issues, fyi, actionables } = g.digest.themes;
+      if (issues.length > 0) {
+        parts.push(`*Issues*\n${issues.map((t) => `• ${t}`).join("\n")}`);
+      }
+      if (fyi.length > 0) {
+        parts.push(`*FYI*\n${fyi.map((t) => `• ${t}`).join("\n")}`);
+      }
+      if (actionables.length > 0) {
+        parts.push(
+          `*Actionables*\n${actionables.map((t) => `• ${t}`).join("\n")}`,
+        );
       }
 
-      const s1 = section(
-        "Open action items / follow-ups",
-        g.digest.open_action_items,
-      );
+      // Per-group detail sections
+      const s1 = section("Action items", g.digest.action_items);
       const s2 = section("Decisions", g.digest.decisions);
-      // Customer issues + blockers already shown at the top, but include
-      // again per-group so context isn't lost.
       const s3 = section("Customer issues", g.digest.customer_issues);
-      const s4 = section("Blockers", g.digest.blockers);
+      const s4 = section("Incidents", g.digest.incidents);
+      const s5 = section("Blockers", g.digest.blockers);
 
-      [s1, s2, s3, s4].filter(Boolean).forEach((s) => parts.push(s as string));
+      [s1, s2, s3, s4, s5]
+        .filter(Boolean)
+        .forEach((s) => parts.push(s as string));
 
-      // Slack section text limit is 3000 chars; chunk if needed.
       const full = parts.join("\n\n");
       for (const chunk of chunk3000(full)) {
         blocks.push({ type: "section", text: { type: "mrkdwn", text: chunk } });
@@ -155,12 +173,13 @@ export function composeBriefing(
     elements: [
       {
         type: "mrkdwn",
-        text: ":robot_face: Auto-generated by superjoin-standup-bot · React with :white_check_mark: to mark items handled · `/standup-brief` to regenerate",
+        text: ":robot_face: Auto-generated by superjoin-standup-bot · `/standup-brief` to regenerate",
       },
     ],
   });
 
-  const fallbackText = `Standup brief — ${dateStr}: ${topIssues.length} customer issues, ${topBlockers.length} blockers across ${digests.length} groups.`;
+  const totalIssues = topIncidents.length + topCustomerIssues.length;
+  const fallbackText = `Standup brief — ${dateStr}: ${totalIssues} issues, ${topBlockers.length} blockers, ${topWins.length} wins across ${digests.length} groups.`;
   return { blocks, fallbackText };
 }
 

@@ -37,7 +37,7 @@ export interface ChannelsFile {
 
 export interface NormalizedMessage {
   ts: string;
-  user: string; // resolved display name when possible
+  user: string;
   user_id: string;
   text: string;
   thread_ts?: string;
@@ -59,11 +59,17 @@ export interface BriefingItem {
 }
 
 export interface SectionDigest {
-  customer_issues: BriefingItem[];
-  open_action_items: BriefingItem[];
-  decisions: BriefingItem[];
-  blockers: BriefingItem[];
-  themes: string[]; // bullet themes for the group
+  incidents: BriefingItem[]; // prod outages, monitoring alerts, error spikes
+  customer_issues: BriefingItem[]; // customer-facing bugs, complaints, churn, cancellations
+  action_items: BriefingItem[]; // open commitments, unanswered @mentions, follow-ups
+  decisions: BriefingItem[]; // explicit decisions made
+  blockers: BriefingItem[]; // things stalling progress, cross-team dependencies
+  wins: BriefingItem[]; // deals closed, good metrics, successful launches
+  themes: {
+    issues: string[]; // key problem patterns worth flagging
+    fyi: string[]; // informational updates, no action needed
+    actionables: string[]; // concrete things the team should act on today
+  };
 }
 
 export interface GroupKey {
@@ -73,7 +79,7 @@ export interface GroupKey {
 
 export interface GroupedDigest {
   group: GroupKey;
-  channels: string[]; // channel names included
+  channels: string[];
   message_count: number;
   digest: SectionDigest;
 }
