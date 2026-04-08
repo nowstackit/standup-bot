@@ -8,7 +8,7 @@ features:
     always_online: true
   slash_commands:
     - command: /standup-brief
-      url: https://YOUR-VERCEL-DOMAIN.vercel.app/api/slack/command
+      url: https://standup-bot-ruddy.vercel.app/api/slack/command
       description: Generate the pre-standup brief on demand
       should_escape: false
 oauth_config:
