@@ -1,3 +1,4 @@
+import { waitUntil } from "@vercel/functions";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import crypto from "node:crypto";
 import { runBrief } from "../../lib/runBrief.js";
@@ -66,19 +67,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       text: ":hourglass_flowing_sand: Generating standup brief — this takes 30-90s. I'll post it to the channel when ready.",
     });
 
-    runBrief().catch(async (e) => {
-      console.error("[command] runBrief failed", e);
-      if (responseUrl) {
-        await fetch(responseUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            response_type: "ephemeral",
-            text: `:x: Brief failed: ${e?.message ?? String(e)}`,
-          }),
-        }).catch(() => {});
-      }
-    });
+    waitUntil(
+      runBrief().catch(async (e) => {
+        console.error("[command] runBrief failed", e);
+        if (responseUrl) {
+          await fetch(responseUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              response_type: "ephemeral",
+              text: `:x: Brief failed: ${e?.message ?? String(e)}`,
+            }),
+          }).catch(() => {});
+        }
+      }),
+    );
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[command] handler error", msg);
