@@ -29,7 +29,13 @@ function section(title: string, items: BriefingItem[]): string | null {
   return `*${title}*\n${items.map(fmtItem).join("\n")}`;
 }
 
-export function composeBriefing(
+/**
+ * Main post — crisp, max ~8 highlight bullets.
+ * Incidents and blockers are shown individually (always critical).
+ * Customer issues shown individually if ≤ 3, else as a count.
+ * Wins shown individually.
+ */
+export function composeMainPost(
   digests: GroupedDigest[],
   windowHours: number,
   isMonday: boolean,
@@ -43,6 +49,8 @@ export function composeBriefing(
     timeZone: "Asia/Kolkata",
   });
 
+  const totalChannels = digests.reduce((s, d) => s + d.channels.length, 0);
+
   blocks.push({
     type: "header",
     text: { type: "plain_text", text: `:sunrise: Standup Brief — ${dateStr}` },
@@ -52,60 +60,96 @@ export function composeBriefing(
     elements: [
       {
         type: "mrkdwn",
-        text: `Last *${windowHours}h* across ${digests.reduce((s, d) => s + d.channels.length, 0)} channels${isMonday ? " · Monday catch-up window" : ""}`,
+        text: `Last *${windowHours}h* across ${totalChannels} channels${isMonday ? " · Monday catch-up" : ""}`,
+      },
+    ],
+  });
+  blocks.push({ type: "divider" });
+
+  const allIncidents = digests.flatMap((d) => d.digest.incidents);
+  const allIssues = digests.flatMap((d) => d.digest.customer_issues);
+  const allBlockers = digests.flatMap((d) => d.digest.blockers);
+  const allWins = digests.flatMap((d) => d.digest.wins);
+
+  if (allIncidents.length > 0) {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `:rotating_light: *Incidents (${allIncidents.length})*\n${allIncidents.map(fmtItem).join("\n")}`,
+      },
+    });
+  }
+
+  if (allBlockers.length > 0) {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `:no_entry: *Blockers (${allBlockers.length})*\n${allBlockers.map(fmtItem).join("\n")}`,
+      },
+    });
+  }
+
+  if (allIssues.length > 0) {
+    const SHOW_INLINE = 3;
+    let text: string;
+    if (allIssues.length <= SHOW_INLINE) {
+      text = `:warning: *Customer issues (${allIssues.length})*\n${allIssues.map(fmtItem).join("\n")}`;
+    } else {
+      const preview = allIssues.slice(0, SHOW_INLINE).map(fmtItem).join("\n");
+      text = `:warning: *Customer issues (${allIssues.length})* — top ${SHOW_INLINE} shown, rest in thread\n${preview}`;
+    }
+    blocks.push({ type: "section", text: { type: "mrkdwn", text } });
+  }
+
+  if (allWins.length > 0) {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `:tada: *Wins (${allWins.length})*\n${allWins.map(fmtItem).join("\n")}`,
+      },
+    });
+  }
+
+  if (
+    allIncidents.length === 0 &&
+    allIssues.length === 0 &&
+    allBlockers.length === 0 &&
+    allWins.length === 0
+  ) {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: ":white_check_mark: Nothing critical — quiet day.",
+      },
+    });
+  }
+
+  blocks.push({ type: "divider" });
+  blocks.push({
+    type: "context",
+    elements: [
+      {
+        type: "mrkdwn",
+        text: ":thread: Full breakdown by team in the thread below · `/standup-brief` to regenerate",
       },
     ],
   });
 
-  // ── Top-of-brief alarms ─────────────────────────────────────────────────
-  const topIncidents = digests.flatMap((d) => d.digest.incidents);
-  const topCustomerIssues = digests.flatMap((d) => d.digest.customer_issues);
-  const topBlockers = digests.flatMap((d) => d.digest.blockers);
-  const topWins = digests.flatMap((d) => d.digest.wins);
+  const totalIssues = allIncidents.length + allIssues.length;
+  const fallbackText = `Standup brief — ${dateStr}: ${totalIssues} issues, ${allBlockers.length} blockers, ${allWins.length} wins.`;
+  return { blocks, fallbackText };
+}
 
-  if (topIncidents.length > 0) {
-    blocks.push({ type: "divider" });
-    blocks.push({
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: `:rotating_light: *Incidents (${topIncidents.length})*\n${topIncidents.map(fmtItem).join("\n")}`,
-      },
-    });
-  }
-
-  if (topCustomerIssues.length > 0) {
-    if (topIncidents.length === 0) blocks.push({ type: "divider" });
-    blocks.push({
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: `:warning: *Customer issues (${topCustomerIssues.length})*\n${topCustomerIssues.map(fmtItem).join("\n")}`,
-      },
-    });
-  }
-
-  if (topBlockers.length > 0) {
-    blocks.push({
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: `:no_entry: *Blockers (${topBlockers.length})*\n${topBlockers.map(fmtItem).join("\n")}`,
-      },
-    });
-  }
-
-  if (topWins.length > 0) {
-    blocks.push({
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: `:tada: *Wins (${topWins.length})*\n${topWins.map(fmtItem).join("\n")}`,
-      },
-    });
-  }
-
-  // ── Per-group sections ──────────────────────────────────────────────────
+/**
+ * Thread sections — one per business line, posted as replies.
+ */
+export function composeThreadSections(
+  digests: GroupedDigest[],
+): { label: string; blocks: any[] }[] {
   const order: Record<string, number> = { prosumer: 0, b2b: 1, shared: 2 };
   const sorted = [...digests].sort(
     (a, b) =>
@@ -119,15 +163,19 @@ export function composeBriefing(
     byBL.get(key)!.push(d);
   }
 
+  const sections: { label: string; blocks: any[] }[] = [];
+
   for (const [bl, groups] of byBL) {
-    blocks.push({ type: "divider" });
+    const activeGroups = groups.filter((g) => g.message_count > 0);
+    if (activeGroups.length === 0) continue;
+
+    const blocks: any[] = [];
     blocks.push({
       type: "header",
       text: { type: "plain_text", text: BL_LABEL[bl] ?? bl },
     });
 
-    for (const g of groups) {
-      if (g.message_count === 0) continue;
+    for (const g of activeGroups) {
       const emoji = FN_EMOJI[g.group.function] ?? ":small_blue_diamond:";
       const parts: string[] = [];
 
@@ -135,7 +183,6 @@ export function composeBriefing(
         `${emoji} *${g.group.function.toUpperCase()}* — ${g.message_count} msgs across ${g.channels.map((c) => `#${c}`).join(", ")}`,
       );
 
-      // Structured themes
       const { issues, fyi, actionables } = g.digest.themes;
       if (issues.length > 0) {
         parts.push(`*Issues*\n${issues.map((t) => `• ${t}`).join("\n")}`);
@@ -149,7 +196,6 @@ export function composeBriefing(
         );
       }
 
-      // Per-group detail sections
       const s1 = section("Action items", g.digest.action_items);
       const s2 = section("Decisions", g.digest.decisions);
       const s3 = section("Customer issues", g.digest.customer_issues);
@@ -165,22 +211,11 @@ export function composeBriefing(
         blocks.push({ type: "section", text: { type: "mrkdwn", text: chunk } });
       }
     }
+
+    sections.push({ label: BL_LABEL[bl] ?? bl, blocks });
   }
 
-  blocks.push({ type: "divider" });
-  blocks.push({
-    type: "context",
-    elements: [
-      {
-        type: "mrkdwn",
-        text: ":robot_face: Auto-generated by superjoin-standup-bot · `/standup-brief` to regenerate",
-      },
-    ],
-  });
-
-  const totalIssues = topIncidents.length + topCustomerIssues.length;
-  const fallbackText = `Standup brief — ${dateStr}: ${totalIssues} issues, ${topBlockers.length} blockers, ${topWins.length} wins across ${digests.length} groups.`;
-  return { blocks, fallbackText };
+  return sections;
 }
 
 function chunk3000(s: string): string[] {

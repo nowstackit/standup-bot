@@ -4,9 +4,10 @@ import {
   getWindow,
   getWorkspaceUrl,
   postBriefing,
+  postReply,
 } from "./slack.js";
 import { summarizeGroup } from "./gemini.js";
-import { composeBriefing } from "./compose.js";
+import { composeMainPost, composeThreadSections } from "./compose.js";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -116,16 +117,28 @@ export async function runBrief(opts?: { dryRun?: boolean }) {
     digests.push(d);
   }
 
-  // 3. Compose Block Kit + post.
-  const { blocks, fallbackText } = composeBriefing(digests, hours, isMonday);
+  // 3. Compose main post + thread sections.
+  const { blocks, fallbackText } = composeMainPost(digests, hours, isMonday);
+  const threadSections = composeThreadSections(digests);
 
   if (opts?.dryRun) {
     console.log("[brief] DRY RUN — would post to", cfg.post_to_channel_name);
+    console.log("=== MAIN POST ===");
     console.log(JSON.stringify(blocks, null, 2));
+    for (const s of threadSections) {
+      console.log(`=== THREAD: ${s.label} ===`);
+      console.log(JSON.stringify(s.blocks, null, 2));
+    }
     return { posted: false, blocks, fallbackText, digests };
   }
 
-  await postBriefing(cfg.post_to_channel, blocks, fallbackText);
+  const ts = await postBriefing(cfg.post_to_channel, blocks, fallbackText);
   console.log(`[brief] posted to #${cfg.post_to_channel_name}`);
+
+  for (const s of threadSections) {
+    await postReply(cfg.post_to_channel, ts, s.blocks, s.label);
+    console.log(`[brief] thread reply posted: ${s.label}`);
+  }
+
   return { posted: true, blocks, fallbackText, digests };
 }

@@ -217,14 +217,32 @@ export async function fetchChannelMessages(
   return out;
 }
 
-/** Post a Block Kit message to the configured standup channel. */
+/** Post a Block Kit message to the configured standup channel. Returns the message ts. */
 export async function postBriefing(
   channelId: string,
+  blocks: any[],
+  text: string,
+): Promise<string> {
+  const res = await slack.chat.postMessage({
+    channel: channelId,
+    text,
+    blocks,
+    unfurl_links: false,
+    unfurl_media: false,
+  });
+  return res.ts as string;
+}
+
+/** Post a Block Kit reply into a thread. */
+export async function postReply(
+  channelId: string,
+  threadTs: string,
   blocks: any[],
   text: string,
 ) {
   return slack.chat.postMessage({
     channel: channelId,
+    thread_ts: threadTs,
     text,
     blocks,
     unfurl_links: false,
