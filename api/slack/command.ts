@@ -41,19 +41,52 @@ function verifySlackSignature(req: VercelRequest, raw: string): boolean {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).end();
 
-  const raw = await readRawBody(req);
-  if (!verifySlackSignature(req, raw)) {
-    return res.status(401).send("invalid signature");
+  let raw = "";
+  let responseUrl = "";
+
+  try {
+    raw = await readRawBody(req);
+    const params = new URLSearchParams(raw);
+    responseUrl = params.get("response_url") ?? "";
+
+    if (!verifySlackSignature(req, raw)) {
+      const reason = !process.env.SLACK_SIGNING_SECRET
+        ? "SLACK_SIGNING_SECRET env var is not set"
+        : "signature mismatch — check that SLACK_SIGNING_SECRET matches your Slack app";
+      console.error("[command] signature verification failed:", reason);
+      return res.status(200).json({
+        response_type: "ephemeral",
+        text: `:x: Auth failed: ${reason}`,
+      });
+    }
+
+    // Ack immediately so Slack doesn't time out.
+    res.status(200).json({
+      response_type: "ephemeral",
+      text: ":hourglass_flowing_sand: Generating standup brief — this takes 30-90s. I'll post it to the channel when ready.",
+    });
+
+    runBrief().catch(async (e) => {
+      console.error("[command] runBrief failed", e);
+      if (responseUrl) {
+        await fetch(responseUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            response_type: "ephemeral",
+            text: `:x: Brief failed: ${e?.message ?? String(e)}`,
+          }),
+        }).catch(() => {});
+      }
+    });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[command] handler error", msg);
+    if (!res.headersSent) {
+      res.status(200).json({
+        response_type: "ephemeral",
+        text: `:x: Internal error: ${msg}`,
+      });
+    }
   }
-
-  // Ack immediately so Slack doesn't time out.
-  res.status(200).json({
-    response_type: "ephemeral",
-    text: ":hourglass_flowing_sand: Generating standup brief — this takes 30-90s. I'll post it to the channel when ready.",
-  });
-
-  // Background work (Vercel keeps the function warm until the promise resolves
-  // because the response body is small and the function timeout in vercel.json
-  // is 60s — bump if needed for very chatty days).
-  runBrief().catch((e) => console.error("[command] runBrief failed", e));
 }
