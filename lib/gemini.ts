@@ -9,7 +9,7 @@ import type {
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) console.warn("[gemini] GEMINI_API_KEY is not set");
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 const genAI = new GoogleGenerativeAI(apiKey ?? "");
 
