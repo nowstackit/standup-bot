@@ -27,6 +27,7 @@ export interface ChannelPattern {
 export interface ChannelsFile {
   channels: ChannelConfig[];
   channel_patterns?: ChannelPattern[];
+  blacklist_channels?: string[];
   post_to_channel: string;
   post_to_channel_name: string;
   timezone: string;

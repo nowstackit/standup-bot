@@ -2,10 +2,14 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { runBrief } from "../../lib/runBrief.js";
 
 /**
- * Vercel Cron entrypoint.
+ * Vercel Cron entrypoint — late fallback only.
  *
- * Schedule (vercel.json): "30 4 * * 1-5"  →  04:30 UTC = 10:00 IST, Mon-Fri.
- * That gives us 30 minutes of buffer before standup at 10:30 IST.
+ * Primary trigger: GitHub Actions (.github/workflows/standup-brief.yml)
+ * fires at 05:00 UTC (10:30 IST) with ~1-5 min jitter.
+ *
+ * Vercel cron (vercel.json): "0 7 * * 1-5" = 07:00 UTC = 12:30 IST.
+ * Only runs if GitHub Actions failed. runBrief() checks for a prior post
+ * and skips automatically, so there's no risk of double-posting.
  *
  * Vercel Cron requests are signed: incoming requests carry an
  * `Authorization: Bearer <CRON_SECRET>` header where CRON_SECRET is the

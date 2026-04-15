@@ -78,6 +78,7 @@
       "priority": "high"
     }
   ],
+  "blacklist_channels": ["mysa-superjoin"],
   "post_to_channel": "C05BRT9CZ7G",
   "post_to_channel_name": "team-schedule",
   "timezone": "Asia/Kolkata",

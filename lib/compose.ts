@@ -183,28 +183,15 @@ export function composeThreadSections(
         `${emoji} *${g.group.function.toUpperCase()}* — ${g.message_count} msgs across ${g.channels.map((c) => `#${c}`).join(", ")}`,
       );
 
-      const { issues, fyi, actionables } = g.digest.themes;
+      const { issues, actionables } = g.digest.themes;
       if (issues.length > 0) {
         parts.push(`*Issues*\n${issues.map((t) => `• ${t}`).join("\n")}`);
-      }
-      if (fyi.length > 0) {
-        parts.push(`*FYI*\n${fyi.map((t) => `• ${t}`).join("\n")}`);
       }
       if (actionables.length > 0) {
         parts.push(
           `*Actionables*\n${actionables.map((t) => `• ${t}`).join("\n")}`,
         );
       }
-
-      const s1 = section("Action items", g.digest.action_items);
-      const s2 = section("Decisions", g.digest.decisions);
-      const s3 = section("Customer issues", g.digest.customer_issues);
-      const s4 = section("Incidents", g.digest.incidents);
-      const s5 = section("Blockers", g.digest.blockers);
-
-      [s1, s2, s3, s4, s5]
-        .filter(Boolean)
-        .forEach((s) => parts.push(s as string));
 
       const full = parts.join("\n\n");
       for (const chunk of chunk3000(full)) {

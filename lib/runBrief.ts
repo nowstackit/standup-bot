@@ -1,4 +1,5 @@
 import {
+  checkBriefPostedToday,
   discoverPatternChannels,
   fetchChannelMessages,
   getWindow,
@@ -28,6 +29,14 @@ function groupKey(c: { business_line: string; function: string }): string {
 }
 
 export async function runBrief(opts?: { dryRun?: boolean }) {
+  if (!opts?.dryRun) {
+    const alreadyPosted = await checkBriefPostedToday(cfg.post_to_channel);
+    if (alreadyPosted) {
+      console.log("[brief] brief already posted today — skipping");
+      return { posted: false, skipped: true };
+    }
+  }
+
   const { oldest, hours, isMonday } = getWindow();
   console.log(
     `[brief] window=${hours}h isMonday=${isMonday} static_channels=${cfg.channels.length}`,
@@ -37,8 +46,13 @@ export async function runBrief(opts?: { dryRun?: boolean }) {
 
   // Auto-discover Slack Connect channels matching configured patterns.
   const staticIds = new Set(cfg.channels.map((c) => c.id));
+  const excludeNames = new Set(cfg.blacklist_channels ?? []);
   const patternChannels = cfg.channel_patterns?.length
-    ? await discoverPatternChannels(cfg.channel_patterns, staticIds)
+    ? await discoverPatternChannels(
+        cfg.channel_patterns,
+        staticIds,
+        excludeNames,
+      )
     : [];
   if (patternChannels.length > 0) {
     console.log(

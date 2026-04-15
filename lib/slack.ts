@@ -62,6 +62,57 @@ export async function resolveUser(userId: string): Promise<string> {
 }
 
 /**
+ * Replace Slack mrkdwn tokens in message text with readable equivalents:
+ *   <@U123ABC>        → @displayname  (userCache must be populated first)
+ *   <#C123ABC|name>   → #name
+ *   <!here>           → @here
+ *   <!channel>        → @channel
+ *   <!everyone>       → @everyone
+ *   <https://...|txt> → txt
+ *   <https://...>     → https://...
+ */
+function resolveSlackText(text: string): string {
+  return text
+    .replace(/<@([UW][A-Z0-9]+)>/g, (_, id) => `@${userCache.get(id) ?? id}`)
+    .replace(/<#[A-Z0-9]+\|([^>]+)>/g, (_, name) => `#${name}`)
+    .replace(/<!here>/g, "@here")
+    .replace(/<!channel>/g, "@channel")
+    .replace(/<!everyone>/g, "@everyone")
+    .replace(/<([^|>]+)\|([^>]+)>/g, (_, _url, label) => label)
+    .replace(/<(https?:[^>]+)>/g, (_, url) => url);
+}
+
+let cachedBotUserId: string | null = null;
+
+async function getBotUserId(): Promise<string> {
+  if (cachedBotUserId) return cachedBotUserId;
+  const res = await slack.auth.test();
+  cachedBotUserId = (res as any).user_id as string;
+  return cachedBotUserId;
+}
+
+/** Returns true if a standup brief was already posted today in the given channel. */
+export async function checkBriefPostedToday(
+  channelId: string,
+): Promise<boolean> {
+  const botUserId = await getBotUserId();
+  const oldest = Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000);
+  try {
+    const res: any = await reader.conversations.history({
+      channel: channelId,
+      oldest: String(oldest),
+      limit: 100,
+    });
+    return (res.messages ?? []).some(
+      (m: any) =>
+        m.user === botUserId && (m.text ?? "").includes("Standup Brief"),
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Window helper. Standups are Mon-Fri at 10:30 IST. On Mondays we want a
  * 72h window so we capture Friday + weekend chatter; on Tue-Fri we just
  * want the last 24h.
@@ -94,6 +145,7 @@ function matchesPattern(name: string, pattern: string): boolean {
 export async function discoverPatternChannels(
   patterns: ChannelPattern[],
   excludeIds: Set<string>,
+  excludeNames: Set<string> = new Set(),
 ): Promise<ChannelConfig[]> {
   const discovered: ChannelConfig[] = [];
   let cursor: string | undefined;
@@ -106,7 +158,13 @@ export async function discoverPatternChannels(
       exclude_archived: true,
     });
     for (const ch of res.channels ?? []) {
-      if (!ch.id || !ch.name || excludeIds.has(ch.id)) continue;
+      if (
+        !ch.id ||
+        !ch.name ||
+        excludeIds.has(ch.id) ||
+        excludeNames.has(ch.name)
+      )
+        continue;
       for (const p of patterns) {
         if (!matchesPattern(ch.name, p.pattern)) continue;
         discovered.push({
@@ -202,10 +260,26 @@ export async function fetchChannelMessages(
   const threadReplies = (await Promise.all(threadFetches)).flat();
   out.push(...threadReplies);
 
-  // Resolve display names concurrently.
-  const uniqueUsers = Array.from(new Set(out.map((m) => m.user_id)));
+  // Resolve display names for message authors + any @mentions inside text.
+  const mentionIds = Array.from(
+    new Set(
+      out.flatMap((m) => {
+        const ids: string[] = [];
+        for (const match of m.text.matchAll(/<@([UW][A-Z0-9]+)>/g)) {
+          ids.push(match[1]);
+        }
+        return ids;
+      }),
+    ),
+  );
+  const uniqueUsers = Array.from(
+    new Set([...out.map((m) => m.user_id), ...mentionIds]),
+  );
   await Promise.all(uniqueUsers.map(resolveUser));
-  for (const m of out) m.user = userCache.get(m.user_id) ?? m.user_id;
+  for (const m of out) {
+    m.user = userCache.get(m.user_id) ?? m.user_id;
+    m.text = resolveSlackText(m.text);
+  }
 
   // Build permalinks locally — no extra API calls.
   for (const m of out) {

@@ -96,10 +96,9 @@ action_items     — Explicit or implicit commitments with no confirmed follow-u
 decisions        — Explicit decisions made ("we're going with X", "shipping Friday", "won't fix", "deprecating Y").
 blockers         — Things stalling progress: waiting on another team, missing access, unresolved dependency, unclear ownership.
 wins             — Positive signals worth celebrating: deal closed, metric up, feature shipped, customer praised, milestone hit.
-themes           — Structured summary in three parts:
-  • issues: 2-4 bullets on key problems or risks that dominated discussion
-  • fyi: 2-3 bullets on informational updates that don't need action (context the team should have)
-  • actionables: 2-4 concrete things the team should do TODAY based on what you read
+themes           — Structured summary in two parts:
+  • issues: max 2 bullets on the most important problems or risks from the discussion
+  • actionables: max 3 concrete things the team should do TODAY based on what you read
 
 Return ONLY a JSON object. No markdown, no prose, no code fences.`;
 
@@ -112,7 +111,6 @@ const SCHEMA_HINT = `{
   "wins":            [{"text": "string", "channel": "#channel-name", "owner": "@person or null", "permalink": "https://... or null"}],
   "themes": {
     "issues":      ["string", "..."],
-    "fyi":         ["string", "..."],
     "actionables": ["string", "..."]
   }
 }`;
