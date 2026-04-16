@@ -23,7 +23,7 @@ jobs:
 
       - name: Trigger standup brief
         run: |
-          response=$(curl --fail-with-body --max-time 1800 \
+          response=$(curl -L --fail-with-body --max-time 1800 \
             --retry 2 --retry-delay 30 \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "${{ secrets.VERCEL_APP_URL }}/api/cron/standup-brief")
