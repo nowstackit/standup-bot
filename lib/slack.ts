@@ -64,6 +64,7 @@ export async function resolveUser(userId: string): Promise<string> {
 /**
  * Replace Slack mrkdwn tokens in message text with readable equivalents:
  *   <@U123ABC>        → @displayname  (userCache must be populated first)
+ *   <@U123ABC|name>   → @displayname  (pipe-fallback variant)
  *   <#C123ABC|name>   → #name
  *   <!here>           → @here
  *   <!channel>        → @channel
@@ -73,7 +74,10 @@ export async function resolveUser(userId: string): Promise<string> {
  */
 function resolveSlackText(text: string): string {
   return text
-    .replace(/<@([UW][A-Z0-9]+)>/g, (_, id) => `@${userCache.get(id) ?? id}`)
+    .replace(
+      /<@([UW][A-Z0-9]+)(?:\|([^>]*))?>/g,
+      (_, id, fallback) => `@${userCache.get(id) ?? fallback ?? id}`,
+    )
     .replace(/<#[A-Z0-9]+\|([^>]+)>/g, (_, name) => `#${name}`)
     .replace(/<!here>/g, "@here")
     .replace(/<!channel>/g, "@channel")
@@ -265,7 +269,9 @@ export async function fetchChannelMessages(
     new Set(
       out.flatMap((m) => {
         const ids: string[] = [];
-        for (const match of m.text.matchAll(/<@([UW][A-Z0-9]+)>/g)) {
+        for (const match of m.text.matchAll(
+          /<@([UW][A-Z0-9]+)(?:\|[^>]*)?>/g,
+        )) {
           ids.push(match[1]);
         }
         return ids;
