@@ -8,9 +8,23 @@ on:
 jobs:
   trigger:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     steps:
+      - name: Validate secrets
+        run: |
+          if [ -z "${{ secrets.VERCEL_APP_URL }}" ]; then
+            echo "ERROR: VERCEL_APP_URL secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "ERROR: CRON_SECRET secret is not set"
+            exit 1
+          fi
+
       - name: Trigger standup brief
         run: |
-          curl -sf -X GET \
+          response=$(curl --fail-with-body --max-time 1800 \
+            --retry 2 --retry-delay 30 \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "${{ secrets.VERCEL_APP_URL }}/api/cron/standup-brief"
+            "${{ secrets.VERCEL_APP_URL }}/api/cron/standup-brief")
+          echo "Response: $response"
